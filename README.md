@@ -25,6 +25,15 @@ device = "mps" // if you are going to use a windows computer, change this to CUD
 
 ## Running the Program
 
+Before you run the program, you have to create a new file called ````auth_token.py````
+
+This file will store your hugging face access key and it will be ignored via .gitignore file
+
+This file should have the following code:
+````
+auth_token = "[YOUR_HUGGING_FACE_ACCESS_KEY]"
+````
+
 In order to start this program run the following command:
 ````
 uvicorn api:app --reload
