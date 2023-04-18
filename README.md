@@ -48,7 +48,7 @@ The endpoint takes three inputs:
 The new generated image is stored to images directory, and can be accessed from: 
 ````http://127.0.0.1:8000/images/[imagetitle.png]````
 
-The response of this endpoint is a JSON object called with the following data fields:
+The response of this endpoint is a JSON object with the following data fields:
 ````
 { "image": 
   {
