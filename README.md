@@ -45,6 +45,9 @@ The endpoint takes three inputs:
 - url: The url of the image that they desire to change,
 - title: Title they want to give to the generated image
 
+The new generated image is stored to images directory, and can be accessed from: 
+````http://127.0.0.1:8000/images/[imagetitle.png]````
+
 The response of this endpoint is a JSON object called with the following data fields:
 ````
 { "image": 
