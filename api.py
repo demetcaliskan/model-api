@@ -11,6 +11,18 @@ import random
 from auth_token import auth_token
 from transformers import MarianMTModel, MarianTokenizer
 from langdetect import detect
+from PIL import Image
+import base64
+from io import BytesIO
+from pydantic import BaseModel
+
+class ImageItem(BaseModel):
+    address: str
+
+class TransformItem(BaseModel):
+    title: str
+    url: str
+    prompt: str
 
 app = FastAPI()
 
@@ -39,20 +51,37 @@ def download_image(url):
     image = image.convert("RGB")
     return image
 
+@app.post("/img-upload")
+def uploadImage(item: ImageItem):
+    newSrc = item.address[22:]
+    bytes_decoded = base64.b64decode(str.encode(newSrc))
+    img = Image.open(BytesIO(bytes_decoded))
+    convertedImage = img.convert("RGB")
+    num = random.randint(0, 10000000000)
+    imgPath = f"images/{str(num)}.png"
+    convertedImage.save(imgPath)
+    imageSource = f"http://127.0.0.1:8000/{imgPath}"
+    resData = {"image": {
+        "src": imageSource,
+        "alt": ""
+        }
+    }
+    return JSONResponse(content=jsonable_encoder(resData))
 
-@app.get("/imageProcess")
-def generate(prompt: str, url: str, title: str):
-    img = download_image(url)
-    image = pipe(prompt, image=img, num_inference_steps=10,
+@app.post("/image-process")
+def generate(item: TransformItem):
+    img = download_image(item.url)
+    print("img",img)
+    image = pipe(item.prompt, image=img, num_inference_steps=10,
                  image_guidance_scale=1).images[0]
     num = random.randint(0, 10000000000)
-    imgPath = f"images/{str(num) + title}.png"
+    imgPath = f"images/{str(num) + item.title}.png"
     image.save(imgPath)
 
     imageSource = f"http://127.0.0.1:8000/{imgPath}"
     resData = {"image": {
         "src": imageSource,
-        "alt": title
+        "alt": item.title
     }
     }
     return JSONResponse(content=jsonable_encoder(resData))
