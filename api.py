@@ -16,13 +16,16 @@ import base64
 from io import BytesIO
 from pydantic import BaseModel
 
+
 class ImageItem(BaseModel):
     address: str
+
 
 class TransformItem(BaseModel):
     title: str
     url: str
     prompt: str
+
 
 app = FastAPI()
 
@@ -52,6 +55,7 @@ def download_image(url):
     image = image.convert("RGB")
     return image
 
+
 @app.post("/img-upload")
 def uploadImage(item: ImageItem):
     newSrc = item.address[22:]
@@ -68,9 +72,10 @@ def uploadImage(item: ImageItem):
     resData = {"image": {
         "src": imageSource,
         "alt": ""
-        }
+    }
     }
     return JSONResponse(content=jsonable_encoder(resData))
+
 
 @app.post("/image-process")
 def generate(item: TransformItem):
@@ -93,23 +98,20 @@ def generate(item: TransformItem):
 @app.get("/translation")
 def generate2(input_text: str):
     DetectorFactory.seed = 0
-    input_lang = detect(input_text)
-    print("input lang", input_lang)
-    output_text = input_text
-    if input_lang != 'en' and input_lang != 'no':
-        model_name = f'Helsinki-NLP/opus-mt-{input_lang}-en'
-        tokenizer = MarianTokenizer.from_pretrained(model_name, use_auth_token=auth_token)
-        model = MarianMTModel.from_pretrained(model_name, use_auth_token=auth_token)
-        inputs = tokenizer(input_text, return_tensors="pt", truncation=True)
-        outputs = model.generate(**inputs)
-        output_text = tokenizer.batch_decode(
-            outputs, skip_special_tokens=True)[0]
-
+    model_name = f'Helsinki-NLP/opus-mt-tr-en'
+    tokenizer = MarianTokenizer.from_pretrained(
+        model_name, use_auth_token=auth_token)
+    model = MarianMTModel.from_pretrained(
+        model_name, use_auth_token=auth_token)
+    inputs = tokenizer(input_text, return_tensors="pt", truncation=True)
+    outputs = model.generate(**inputs)
+    output_text = tokenizer.batch_decode(
+        outputs, skip_special_tokens=True)[0]
     print("output", output_text)
     resData = {"translation": {
-            "translatedText": output_text
-        }
-        }
+        "translatedText": output_text
+    }
+    }
     return JSONResponse(content=jsonable_encoder(resData))
 
 
