@@ -10,7 +10,7 @@ import requests
 import random
 from auth_token import auth_token
 from transformers import MarianMTModel, MarianTokenizer
-from langdetect import detect
+from langdetect import detect, DetectorFactory
 from PIL import Image
 import base64
 from io import BytesIO
@@ -47,6 +47,7 @@ pipe.enable_attention_slicing()
 
 def download_image(url):
     image = PIL.Image.open(requests.get(url, stream=True).raw)
+    image.thumbnail((500, 500))
     image = PIL.ImageOps.exif_transpose(image)
     image = image.convert("RGB")
     return image
@@ -60,6 +61,9 @@ def uploadImage(item: ImageItem):
     num = random.randint(0, 10000000000)
     imgPath = f"images/{str(num)}.png"
     convertedImage.save(imgPath)
+    image = Image.open(imgPath)
+    image.thumbnail((500, 500))
+    image.save(imgPath)
     imageSource = f"http://127.0.0.1:8000/{imgPath}"
     resData = {"image": {
         "src": imageSource,
@@ -71,7 +75,6 @@ def uploadImage(item: ImageItem):
 @app.post("/image-process")
 def generate(item: TransformItem):
     img = download_image(item.url)
-    print("img",img)
     image = pipe(item.prompt, image=img, num_inference_steps=10,
                  image_guidance_scale=1).images[0]
     num = random.randint(0, 10000000000)
@@ -89,19 +92,21 @@ def generate(item: TransformItem):
 
 @app.get("/translation")
 def generate2(input_text: str):
-    input_text = input_text
+    DetectorFactory.seed = 0
     input_lang = detect(input_text)
+    print("input lang", input_lang)
     output_text = input_text
-    if input_lang != 'en':
+    if input_lang != 'en' and input_lang != 'no':
         model_name = f'Helsinki-NLP/opus-mt-{input_lang}-en'
-        tokenizer = MarianTokenizer.from_pretrained(model_name)
-        model = MarianMTModel.from_pretrained(model_name)
+        tokenizer = MarianTokenizer.from_pretrained(model_name, use_auth_token=auth_token)
+        model = MarianMTModel.from_pretrained(model_name, use_auth_token=auth_token)
         inputs = tokenizer(input_text, return_tensors="pt", truncation=True)
         outputs = model.generate(**inputs)
         output_text = tokenizer.batch_decode(
             outputs, skip_special_tokens=True)[0]
 
-        resData = {"translation": {
+    print("output", output_text)
+    resData = {"translation": {
             "translatedText": output_text
         }
         }
