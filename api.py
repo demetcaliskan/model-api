@@ -15,7 +15,6 @@ from PIL import Image
 import base64
 from io import BytesIO
 from pydantic import BaseModel
-import replicate_token
 
 
 class ImageItem(BaseModel):
@@ -27,6 +26,7 @@ class TransformItem(BaseModel):
     url: str
     prompt: str
     neg_prompt: str
+    num_inference_steps: int
 
 
 app = FastAPI()
@@ -82,15 +82,12 @@ def uploadImage(item: ImageItem):
 
 @app.post("/image-process")
 def generate(item: TransformItem):
-    guidance_scale = 14
-    image_guidance_scale = 1.65
     img = download_image(item.url)
-    image = pipe(item.prompt, negative_prompt=item.neg_prompt, image=img, num_inference_steps=100,
+    image = pipe(item.prompt, negative_prompt=item.neg_prompt, image=img, num_inference_steps=item.num_inference_steps,
                  image_guidance_scale=1.65, guidance_scale=12).images[0]
     num = random.randint(0, 10000000000)
     imgPath = f"images/{str(num) + item.title}.png"
     image.save(imgPath)
-
     imageSource = f"http://127.0.0.1:8000/{imgPath}"
     resData = {"image": {
         "src": imageSource,
