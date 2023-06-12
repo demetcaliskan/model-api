@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 from fastapi.encoders import jsonable_encoder
 from fastapi.staticfiles import StaticFiles
 import torch
@@ -8,15 +8,14 @@ from diffusers import StableDiffusionInstructPix2PixPipeline, EulerAncestralDisc
 import PIL
 import requests
 import random
-from auth_token import auth_token
 from transformers import MarianMTModel, MarianTokenizer
 from langdetect import detect, DetectorFactory
 from PIL import Image
 import base64
 from io import BytesIO
 from pydantic import BaseModel
-import replicate_token
 
+auth_token = "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"
 
 class ImageItem(BaseModel):
     address: str
@@ -39,7 +38,7 @@ app.add_middleware(
     allow_headers=["*"]
 )
 
-device = "mps"
+device = "cuda" if torch.cuda.is_available() else "cpu"
 model_id = "timbrooks/instruct-pix2pix"
 
 pipe = StableDiffusionInstructPix2PixPipeline.from_pretrained(
@@ -90,14 +89,14 @@ def generate(item: TransformItem):
     num = random.randint(0, 10000000000)
     imgPath = f"images/{str(num) + item.title}.png"
     image.save(imgPath)
-
-    imageSource = f"http://127.0.0.1:8000/{imgPath}"
-    resData = {"image": {
-        "src": imageSource,
-        "alt": item.title
-    }
-    }
-    return JSONResponse(content=jsonable_encoder(resData))
+    return Response(content=image, media_type="image/png")
+    # imageSource = f"http://127.0.0.1:8000/{imgPath}"
+    # resData = {"image": {
+    #     "src": imageSource,
+    #     "alt": item.title
+    # }
+    # }
+    # return JSONResponse(content=jsonable_encoder(resData))
 
 
 @app.get("/translation")
@@ -120,4 +119,4 @@ def generate2(input_text: str):
     return JSONResponse(content=jsonable_encoder(resData))
 
 
-app.mount("/images", StaticFiles(directory="images"), name="images")
+##app.mount("/images", StaticFiles(directory="images"), name="images")
