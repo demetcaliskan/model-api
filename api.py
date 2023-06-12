@@ -15,6 +15,7 @@ from PIL import Image
 import base64
 from io import BytesIO
 from pydantic import BaseModel
+import replicate_token
 
 
 class ImageItem(BaseModel):
@@ -25,6 +26,7 @@ class TransformItem(BaseModel):
     title: str
     url: str
     prompt: str
+    neg_prompt: str
 
 
 app = FastAPI()
@@ -39,6 +41,7 @@ app.add_middleware(
 
 device = "mps"
 model_id = "timbrooks/instruct-pix2pix"
+
 pipe = StableDiffusionInstructPix2PixPipeline.from_pretrained(
     model_id, torch_dtype=torch.float16, safety_checker=None, use_auth_token=auth_token)
 
@@ -66,7 +69,7 @@ def uploadImage(item: ImageItem):
     imgPath = f"images/{str(num)}.png"
     convertedImage.save(imgPath)
     image = Image.open(imgPath)
-    image.thumbnail((500, 500))
+    image.thumbnail((1000, 1000))
     image.save(imgPath)
     imageSource = f"http://127.0.0.1:8000/{imgPath}"
     resData = {"image": {
@@ -79,9 +82,11 @@ def uploadImage(item: ImageItem):
 
 @app.post("/image-process")
 def generate(item: TransformItem):
+    guidance_scale = 14
+    image_guidance_scale = 1.65
     img = download_image(item.url)
-    image = pipe(item.prompt, image=img, num_inference_steps=10,
-                 image_guidance_scale=1).images[0]
+    image = pipe(item.prompt, negative_prompt=item.neg_prompt, image=img, num_inference_steps=100,
+                 image_guidance_scale=1.65, guidance_scale=12).images[0]
     num = random.randint(0, 10000000000)
     imgPath = f"images/{str(num) + item.title}.png"
     image.save(imgPath)
