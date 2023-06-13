@@ -25,6 +25,7 @@ class TransformItem(BaseModel):
     url: str
     prompt: str
     neg_prompt: str
+    num_inference_steps: int
 
 
 app = FastAPI()
@@ -82,10 +83,8 @@ def uploadImage(item: ImageItem):
 
 @app.post("/image-process")
 def generate(item: TransformItem):
-    guidance_scale = 14
-    image_guidance_scale = 1.65
     img = download_image(item.url)
-    image = pipe(item.prompt, negative_prompt=item.neg_prompt, image=img, num_inference_steps=100, image_guidance_scale=1.65, guidance_scale=12).images[0]
+    image = pipe(item.prompt, negative_prompt=item.neg_prompt, image=img, num_inference_steps=item.num_inference_steps, image_guidance_scale=1.65, guidance_scale=12).images[0]
     img_byte_arr = io.BytesIO()
     image.save(img_byte_arr, format='PNG')
     img_byte_arr.seek(0)
