@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, Response
+from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.encoders import jsonable_encoder
 from fastapi.staticfiles import StaticFiles
 import torch
@@ -14,6 +14,7 @@ from PIL import Image
 import base64
 from io import BytesIO
 from pydantic import BaseModel
+import io
 
 auth_token = "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"
 
@@ -38,7 +39,7 @@ app.add_middleware(
     allow_headers=["*"]
 )
 
-device = "cuda" if torch.cuda.is_available() else "cpu"
+device = "cuda" if torch.cuda.is_available() else "cpu" # change this to 'mps' if you are running locally 
 model_id = "timbrooks/instruct-pix2pix"
 
 pipe = StableDiffusionInstructPix2PixPipeline.from_pretrained(
@@ -84,19 +85,12 @@ def generate(item: TransformItem):
     guidance_scale = 14
     image_guidance_scale = 1.65
     img = download_image(item.url)
-    image = pipe(item.prompt, negative_prompt=item.neg_prompt, image=img, num_inference_steps=100,
-                 image_guidance_scale=1.65, guidance_scale=12).images[0]
-    num = random.randint(0, 10000000000)
-    imgPath = f"images/{str(num) + item.title}.png"
-    image.save(imgPath)
-    return Response(content=image, media_type="image/png")
-    # imageSource = f"http://127.0.0.1:8000/{imgPath}"
-    # resData = {"image": {
-    #     "src": imageSource,
-    #     "alt": item.title
-    # }
-    # }
-    # return JSONResponse(content=jsonable_encoder(resData))
+    image = pipe(item.prompt, negative_prompt=item.neg_prompt, image=img, num_inference_steps=100, image_guidance_scale=1.65, guidance_scale=12).images[0]
+    img_byte_arr = io.BytesIO()
+    image.save(img_byte_arr, format='PNG')
+    img_byte_arr.seek(0)
+    # returns image file instead of image url
+    return StreamingResponse(img_byte_arr, media_type="image/png")
 
 
 @app.get("/translation")
