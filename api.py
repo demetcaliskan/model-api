@@ -2,14 +2,12 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.encoders import jsonable_encoder
-from fastapi.staticfiles import StaticFiles
 import torch
 from diffusers import StableDiffusionInstructPix2PixPipeline, EulerAncestralDiscreteScheduler
 import PIL
 import requests
 import random
 from transformers import MarianMTModel, MarianTokenizer
-from langdetect import detect, DetectorFactory
 from PIL import Image
 import base64
 from io import BytesIO
@@ -39,11 +37,13 @@ app.add_middleware(
     allow_headers=["*"]
 )
 
-device = "cuda" if torch.cuda.is_available() else "cpu" # change this to 'mps' if you are running locally 
+# change this to 'mps' if you are running locally 
+device = "cuda" if torch.cuda.is_available() else "cpu"
 model_id = "timbrooks/instruct-pix2pix"
 
+# change torch_dtype to torch.float16 if you are going to use mps as device
 pipe = StableDiffusionInstructPix2PixPipeline.from_pretrained(
-    model_id, torch_dtype=torch.float16, safety_checker=None, use_auth_token=auth_token)
+    model_id, torch_dtype=torch.float32, safety_checker=None, use_auth_token=auth_token)
 
 pipe.to(device)
 pipe.scheduler = EulerAncestralDiscreteScheduler.from_config(
@@ -95,7 +95,6 @@ def generate(item: TransformItem):
 
 @app.get("/translation")
 def generate2(input_text: str):
-    DetectorFactory.seed = 0
     model_name = f'Helsinki-NLP/opus-mt-tr-en'
     tokenizer = MarianTokenizer.from_pretrained(
         model_name, use_auth_token=auth_token)
